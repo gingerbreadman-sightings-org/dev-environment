@@ -1,4 +1,4 @@
-if $yaml_values == undef { $yaml_values = loadyaml('/vagrant/puphpet/config.yaml') }
+if $yaml_values == undef { $yaml_values = merge_yaml('/vagrant/puphpet/config.yaml', '/vagrant/puphpet/config-custom.yaml') }
 if $apache_values == undef { $apache_values = $yaml_values['apache'] }
 if $php_values == undef { $php_values = hiera_hash('php', false) }
 if $hhvm_values == undef { $hhvm_values = hiera_hash('hhvm', false) }
@@ -28,38 +28,23 @@ if hash_key_equals($apache_values, 'install', 1) {
     }
   }
 
-  $webroot_location      = $puphpet::params::apache_webroot_location
-  $apache_provider_types = [
-    'virtualbox',
-    'vmware_fusion',
-    'vmware_desktop',
-    'parallels'
-  ]
+  $www_location  = $puphpet::params::apache_www_location
+  $webroot_user  = 'www-data'
+  $webroot_group = 'www-data'
 
-  exec { "mkdir -p ${webroot_location}":
-    creates => $webroot_location,
-  }
-
-  if downcase($::provisioner_type) in $apache_provider_types {
-    $webroot_location_group = 'www-data'
-    $vhost_docroot_group    = 'www-data'
-  } else {
-    $webroot_location_group = undef
-    $vhost_docroot_group    = 'www-user'
-  }
-
-  if ! defined(File[$webroot_location]) {
-    file { $webroot_location:
+  if ! defined(File[$www_location]) {
+    file { $www_location:
       ensure  => directory,
-      group   => $webroot_location_group,
+      owner   => 'root',
+      group   => $webroot_group,
       mode    => '0775',
-      require => [
-        Exec["mkdir -p ${webroot_location}"],
-        Group['www-data']
-      ],
+      before  => Class['apache'],
+      require => Group[$webroot_group],
     }
   }
 
+  # some of the following values used in
+  # puphpet/apache/custom_fragment.erb template
   if $require_mod_php {
     $mpm_module           = 'prefork'
     $disallowed_modules   = []
@@ -82,8 +67,8 @@ if hash_key_equals($apache_values, 'install', 1) {
     $fcgi_string          = ''
   }
 
-  $sendfile = $apache_values['settings']['sendfile'] ? {
-    1       => 'On',
+  $sendfile = array_true($apache_values['settings'], 'sendfile') ? {
+    true    => 'On',
     default => 'Off'
   }
 
@@ -140,42 +125,42 @@ if hash_key_equals($apache_values, 'install', 1) {
   each( $apache_vhosts ) |$key, $vhost| {
     exec { "exec mkdir -p ${vhost['docroot']} @ key ${key}":
       command => "mkdir -p ${vhost['docroot']}",
+      user    => $webroot_user,
+      group   => $webroot_group,
       creates => $vhost['docroot'],
+      require => File[$www_location],
     }
 
+    # needed by apache::vhost
     if ! defined(File[$vhost['docroot']]) {
       file { $vhost['docroot']:
         ensure  => directory,
-        group   => $vhost_docroot_group,
-        mode    => '0765',
-        require => [
-          Exec["exec mkdir -p ${vhost['docroot']} @ key ${key}"],
-          Group['www-user']
-        ]
+        mode    => '0775',
+        require => Exec["exec mkdir -p ${vhost['docroot']} @ key ${key}"],
       }
     }
 
-    $ssl = 'ssl' in $vhost and str2bool($vhost['ssl']) ? {
+    $ssl = array_true($vhost, 'ssl') ? {
       true    => true,
       default => false
     }
 
-    $ssl_cert = hash_key_true($vhost, 'ssl_cert') ? {
+    $ssl_cert = array_true($vhost, 'ssl_cert') ? {
       true    => $vhost['ssl_cert'],
       default => $puphpet::params::ssl_cert_location
     }
 
-    $ssl_key = hash_key_true($vhost, 'ssl_key') ? {
+    $ssl_key = array_true($vhost, 'ssl_key') ? {
       true    => $vhost['ssl_key'],
       default => $puphpet::params::ssl_key_location
     }
 
-    $ssl_chain = hash_key_true($vhost, 'ssl_chain') ? {
+    $ssl_chain = array_true($vhost, 'ssl_chain') ? {
       true    => $vhost['ssl_chain'],
       default => undef
     }
 
-    $ssl_certs_dir = hash_key_true($vhost, 'ssl_certs_dir') ? {
+    $ssl_certs_dir = array_true($vhost, 'ssl_certs_dir') ? {
       true    => $vhost['ssl_certs_dir'],
       default => undef
     }
@@ -187,7 +172,8 @@ if hash_key_equals($apache_values, 'install', 1) {
       'ssl_cert'        => $ssl_cert,
       'ssl_key'         => $ssl_key,
       'ssl_chain'       => $ssl_chain,
-      'ssl_certs_dir'   => $ssl_certs_dir
+      'ssl_certs_dir'   => $ssl_certs_dir,
+      'manage_docroot'  => false
     }), 'engine')
 
     create_resources(apache::vhost, { "${key}" => $vhost_merged })
@@ -200,7 +186,7 @@ if hash_key_equals($apache_values, 'install', 1) {
   if $::osfamily == 'debian' and ! $require_mod_php {
     file { ['/var/run/apache2/ssl_mutex']:
       ensure  => directory,
-      group   => 'www-data',
+      group   => $webroot_group,
       mode    => '0775',
       require => Class['apache'],
       notify  => Service['httpd'],
@@ -220,5 +206,17 @@ if hash_key_equals($apache_values, 'install', 1) {
   class { 'puphpet::ssl_cert':
     require => Class['apache'],
     notify  => Service['httpd'],
+  }
+
+  if defined(File[$puphpet::params::apache_webroot_location]) {
+    file { "${puphpet::params::apache_webroot_location}/index.html":
+      ensure  => present,
+      owner   => 'root',
+      group   => $webroot_group,
+      mode    => '0664',
+      source  => 'puppet:///modules/puphpet/webserver_landing.erb',
+      replace => true,
+      require => File[$puphpet::params::apache_webroot_location],
+    }
   }
 }

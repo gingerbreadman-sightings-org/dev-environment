@@ -10,7 +10,7 @@ vagrantfile-local:
         network:
             private_network: 192.168.56.199
             forwarded_port:
-                BE8CXzZpb5P2:
+                hviWgFBT2mP8:
                     host: '6219'
                     guest: '22'
         post_up_message: ''
@@ -32,7 +32,7 @@ vagrantfile-local:
                     - '--hiera_config /vagrant/puphpet/puppet/hiera.yaml'
                     - '--parser future'
         synced_folder:
-            1T6KcFmb0NWQ:
+            dGrcgY0vhGQl:
                 owner: www-data
                 group: www-data
                 source: ./
@@ -80,14 +80,14 @@ apache:
     settings:
         user: www-data
         group: www-data
-        default_vhost: false
+        default_vhost: true
         manage_user: false
         manage_group: false
         sendfile: 0
     modules:
         - rewrite
     vhosts:
-        x5pngzi5svi5:
+        bvcu89oiiqs1:
             servername: gingerbreadman-sightings.dev
             serveraliases:
                 - www.gingerbreadman-sightings.dev
@@ -96,7 +96,7 @@ apache:
             setenv:
                 - 'APP_ENV dev'
             directories:
-                8hgrrjtfv2v6:
+                lt2cpceaaq1v:
                     provider: directory
                     path: /var/www/gingerbreadman-sightings.org/web
                     options:
@@ -115,7 +115,7 @@ apache:
             ssl_key: ''
             ssl_chain: ''
             ssl_certs_dir: ''
-        bbgiic79xck7:
+        sbb0i6tyrqoz:
             servername: gingerbreadman-sightings.prod
             serveraliases:
                 - www.gingerbreadman-sightings.prod
@@ -124,9 +124,9 @@ apache:
             setenv:
                 - 'APP_ENV prod'
             directories:
-                nftnpsreuquj:
+                d9pq9yckyvkh:
                     provider: directory
-                    path: ''
+                    path: /var/www/gingerbreadman-sightings.org/web
                     options:
                         - Indexes
                         - FollowSymlinks
@@ -152,24 +152,21 @@ nginx:
         proxy_buffers: '4 256k'
     upstreams: {  }
     vhosts:
-        ic0hhakobcbh:
+        l1ume2hhizsa:
             proxy: ''
             server_name: awesome.dev
             server_aliases:
                 - www.awesome.dev
             www_root: /var/www/awesome
             listen_port: '80'
-            location: \.php$
             index_files:
                 - index.html
                 - index.htm
                 - index.php
-            envvars:
-                - 'APP_ENV dev'
-            engine: php
             client_max_body_size: 1m
             ssl_cert: ''
             ssl_key: ''
+            ssl_port: ''
 php:
     install: '1'
     version: '56'
@@ -189,13 +186,12 @@ php:
             - mysqlnd
         pear: {  }
         pecl:
-            - pecl_http
             - ZendOpcache
+            - pecl_http
     ini:
         display_errors: On
         error_reporting: '-1'
         session.save_path: /var/lib/php/session
-    timezone: UTC
     mod_php: 0
 hhvm:
     install: '0'
@@ -238,11 +234,12 @@ python:
     versions: {  }
 mysql:
     install: '1'
-    override_options: {  }
-    root_password: root
+    settings:
+        override_options: {  }
+        root_password: root
     adminer: 0
     databases:
-        UodQQH7df71t:
+        dX8jmGPTqRkJ:
             grant:
                 - ALL
             name: gingerbreadman
@@ -253,19 +250,22 @@ mysql:
 postgresql:
     install: '0'
     settings:
-        root_password: '123'
-        user_group: postgres
-        encoding: UTF8
-        version: '9.3'
+        global:
+            encoding: UTF8
+            version: '9.3'
+        server:
+            postgres_password: ''
     databases: {  }
+    users: {  }
+    grants: {  }
     adminer: 0
 mariadb:
     install: '0'
-    override_options: {  }
-    root_password: '123'
+    settings:
+        override_options: {  }
+        root_password: '123'
     adminer: 0
     databases: {  }
-    version: '10.0'
 sqlite:
     install: '0'
     adminer: 0
@@ -305,6 +305,9 @@ rabbitmq:
     install: '0'
     settings:
         port: '5672'
+    users: {  }
+    vhosts: {  }
+    plugins: {  }
 elastic_search:
     install: '0'
     settings:

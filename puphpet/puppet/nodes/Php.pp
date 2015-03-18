@@ -37,6 +37,7 @@ if hash_key_equals($php_values, 'install', 1) {
     $php_webserver_service        = 'httpd'
     $php_webserver_service_ini    = $php_webserver_service
     $php_webserver_service_ensure = 'running'
+    $php_webserver_service_notify = [Service[$php_webserver_service]]
     $php_webserver_restart        = true
     $php_config_file              = $php::params::config_file
     $php_manage_service           = false
@@ -47,6 +48,7 @@ if hash_key_equals($php_values, 'install', 1) {
     $php_webserver_service        = "${php_prefix}fpm"
     $php_webserver_service_ini    = $php_webserver_service
     $php_webserver_service_ensure = 'running'
+    $php_webserver_service_notify = [Service[$php_webserver_service]]
     $php_webserver_restart        = true
     $php_config_file              = $php_fpm_ini
     $php_manage_service           = true
@@ -80,6 +82,7 @@ if hash_key_equals($php_values, 'install', 1) {
     $php_webserver_service        = undef
     $php_webserver_service_ini    = undef
     $php_webserver_service_ensure = undef
+    $php_webserver_service_notify = []
     $php_webserver_restart        = false
     $php_config_file              = $php::params::config_file
     $php_manage_service           = false
@@ -139,12 +142,11 @@ if hash_key_equals($php_values, 'install', 1) {
 
   $php_inis = merge({
     'cgi.fix_pathinfo' => 1,
-    'date.timezone'    => $php_values['timezone'],
   }, $php_values['ini'])
 
   each( $php_inis ) |$key, $value| {
     if is_array($value) {
-      each( $php_values['ini'][$key] ) |$innerkey, $innervalue| {
+      each( $php_inis[$key] ) |$innerkey, $innervalue| {
         puphpet::php::ini { "${key}_${innerkey}":
           entry       => "CUSTOM_${innerkey}/${key}",
           value       => $innervalue,
@@ -162,21 +164,26 @@ if hash_key_equals($php_values, 'install', 1) {
     }
   }
 
-  if hash_key_true($php_values['ini'], 'session.save_path'){
-    $php_sess_save_path = $php_values['ini']['session.save_path']
+  if array_true($php_inis, 'session.save_path') {
+    $php_sess_save_path = $php_inis['session.save_path']
 
     # Handles URLs like tcp://127.0.0.1:6379
     # absolute file paths won't have ":"
     if ! (':' in $php_sess_save_path) {
-      exec {"mkdir -p ${php_sess_save_path}":
+      exec { "mkdir -p ${php_sess_save_path}" :
         creates => $php_sess_save_path,
-        before  => Class['php']
+        require => Package[$php_package],
+        notify  => $php_webserver_service_notify,
       }
-      -> file { $php_sess_save_path:
-        ensure => directory,
-        group  => 'www-data',
-        owner  => 'www-data',
-        mode   => '0775',
+
+      if ! defined(File[$php_sess_save_path]) {
+        file { $php_sess_save_path:
+          ensure  => directory,
+          owner   => 'www-data',
+          group   => 'www-data',
+          mode    => '0775',
+          require => Exec["mkdir -p ${php_sess_save_path}"],
+        }
       }
     }
   }

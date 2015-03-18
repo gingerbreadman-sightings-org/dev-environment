@@ -1,4 +1,5 @@
 if $server_values == undef { $server_values = hiera_hash('server', false) }
+if $locales_values == undef { $locales_values = hiera_hash('locales', {}) }
 
 include ntp
 include swap_file
@@ -32,7 +33,7 @@ case $::ssh_username {
 
 User[$::ssh_username]
 
-each( ['apache', 'nginx', 'httpd', 'www-data'] ) |$key| {
+each( ['apache', 'nginx', 'httpd', 'www-data', 'www-user'] ) |$key| {
   if ! defined(User[$key]) {
     user { $key:
       ensure  => present,
@@ -150,4 +151,23 @@ each( $server_values['packages'] ) |$package| {
       ensure => present,
     }
   }
+}
+
+if $::osfamily == 'debian' {
+  $locales_default_value = array_true($locales_values, 'default_value') ? {
+    true    => $locales_values['default_value'],
+    default => 'en_US.UTF-8'
+  }
+
+  $locales_available = array_true($locales_values, 'available') ? {
+    true    => $locales_values['default_value'],
+    default => ['en_US.UTF-8 UTF-8', 'en_GB.UTF-8 UTF-8']
+  }
+
+  $locales_settings_merged = merge($locales_values, {
+    'default_value' => $locales_default_value,
+    'available'     => $locales_available,
+  })
+
+  create_resources('class', { 'locales' => $locales_settings_merged })
 }

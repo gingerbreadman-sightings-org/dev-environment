@@ -9,12 +9,14 @@ describe 'apache::mod::passenger', :type => :class do
       {
         :osfamily               => 'Debian',
         :operatingsystemrelease => '6',
+        :kernel                 => 'Linux',
         :concat_basedir         => '/dne',
         :lsbdistcodename        => 'squeeze',
         :operatingsystem        => 'Debian',
         :id                     => 'root',
         :kernel                 => 'Linux',
         :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        :is_pe                  => false,
       }
     end
     it { is_expected.to contain_class("apache::params") }
@@ -123,11 +125,13 @@ describe 'apache::mod::passenger', :type => :class do
         {
           :osfamily               => 'Debian',
           :operatingsystemrelease => '12.04',
+          :kernel                 => 'Linux',
           :operatingsystem        => 'Ubuntu',
           :lsbdistrelease         => '12.04',
           :concat_basedir         => '/dne',
           :id                     => 'root',
           :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          :is_pe                  => false,
         }
       end
 
@@ -142,10 +146,12 @@ describe 'apache::mod::passenger', :type => :class do
           :osfamily               => 'Debian',
           :operatingsystemrelease => '14.04',
           :operatingsystem        => 'Ubuntu',
+          :kernel                 => 'Linux',
           :lsbdistrelease         => '14.04',
           :concat_basedir         => '/dne',
           :id                     => 'root',
           :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          :is_pe                  => false,
         }
       end
 
@@ -160,16 +166,38 @@ describe 'apache::mod::passenger', :type => :class do
           :osfamily               => 'Debian',
           :operatingsystemrelease => '7.3',
           :operatingsystem        => 'Debian',
+          :kernel                 => 'Linux',
           :lsbdistcodename        => 'wheezy',
           :concat_basedir         => '/dne',
           :id                     => 'root',
           :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          :is_pe                  => false,
         }
       end
 
       it { is_expected.to contain_file('passenger.conf').with_content(%r{PassengerRoot "/usr"}) }
       it { is_expected.to contain_file('passenger.conf').with_content(%r{PassengerRuby "/usr/bin/ruby"}) }
       it { is_expected.to contain_file('passenger.conf').without_content(/PassengerDefaultRuby/) }
+    end
+
+    context "with Debian 8 defaults" do
+      let :facts do
+        {
+          :osfamily               => 'Debian',
+          :operatingsystemrelease => '8.0',
+          :operatingsystem        => 'Debian',
+          :kernel                 => 'Linux',
+          :lsbdistcodename        => 'jessie',
+          :concat_basedir         => '/dne',
+          :id                     => 'root',
+          :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          :is_pe                  => false,
+        }
+      end
+
+      it { is_expected.to contain_file('passenger.conf').with_content(%r{PassengerRoot "/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini"}) }
+      it { is_expected.to contain_file('passenger.conf').without_content(/PassengerRuby/) }
+      it { is_expected.to contain_file('passenger.conf').with_content(%r{PassengerDefaultRuby "/usr/bin/ruby"}) }
     end
   end
 
@@ -183,6 +211,7 @@ describe 'apache::mod::passenger', :type => :class do
         :id                     => 'root',
         :kernel                 => 'Linux',
         :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        :is_pe                  => false,
       }
     end
     it { is_expected.to contain_class("apache::params") }
@@ -221,6 +250,7 @@ describe 'apache::mod::passenger', :type => :class do
         :id                     => 'root',
         :kernel                 => 'FreeBSD',
         :path                   => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        :is_pe                  => false,
       }
     end
     it { is_expected.to contain_class("apache::params") }
