@@ -1,0 +1,16 @@
+parameters:
+    database_driver:   pdo_mysql
+    database_host:     127.0.0.1
+    database_port:     ~
+    database_name:     gingerbreadman
+    database_user:     gingerbreadman
+    database_password: gingerbreadman
+
+    mailer_transport:  smtp
+    mailer_host:       127.0.0.1
+    mailer_user:       ~
+    mailer_password:   ~
+    mailer_port:       1025
+
+    locale:            en
+    secret:            30r8gf28db20fb8s24bd8240bf30bd

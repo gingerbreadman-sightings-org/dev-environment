@@ -1,0 +1,9 @@
+# IntelliJ
+/.idea/
+
+# Vagrant
+/.vagrant/
+/html/
+
+# Project
+/gingerbreadman-sightings.org/
